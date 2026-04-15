@@ -1,0 +1,3 @@
+[submodule "vendor/nbis"]
+	path = vendor/nbis
+	url = https://github.com/lessandro/nbis.git
