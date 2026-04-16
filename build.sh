@@ -4,15 +4,15 @@ set -e
 ROOT=$(pwd)
 SRC=$ROOT/vendor/nbis
 
-# # -------- Linux --------
-# rm -rf build-linux
-# cp -r $SRC build-linux
-# cd build-linux
+# -------- Linux --------
+rm -rf build-linux
+cp -r $SRC build-linux
+cd build-linux
 
-# ./setup.sh $ROOT/artifacts/linux --without-X11 --STDLIBS --64
-# make config
-# make -j$(nproc) it CFLAGS="-fcommon"
-# make install
+./setup.sh $ROOT/artifacts/linux --without-X11 --STDLIBS --64
+make config
+make -j$(nproc) it CFLAGS="-fcommon"
+make install
 
 # cd $ROOT
 
@@ -59,13 +59,6 @@ for dir in $MISSING_LIBS; do
         RANLIB="$RANLIB" \
         CFLAGS="-fcommon -I$COMPAT_DIR -include $COMPAT_DIR/compat.h $MASTER_INCLUDES"
 done
-
-# # headers
-# for d in */ ; do
-#   if [ -f "$d/Makefile" ]; then
-#     (cd "$d" && make -q cpheaders 2>/dev/null && make cpheaders) || true
-#   fi
-# done
 
 # 2. Build everything else
 # libs only
