@@ -11,10 +11,10 @@ cd build-linux
 
 ./setup.sh $ROOT/artifacts/linux --without-X11 --STDLIBS --64
 make config
-make -j$(nproc) it CFLAGS="-fcommon"
+make -j$(nproc) it CFLAGS="-fcommon -D__NBISLE__"
 make install
 
-# cd $ROOT
+cd $ROOT
 
 # -------- Windows --------
 rm -rf build-windows
@@ -35,10 +35,13 @@ MASTER_INCLUDES="-I$BUILD_DIR/commonnbis/include \
 -I$BUILD_DIR/mindtct/include \
 -I$BUILD_DIR/nfseg/include \
 -I$BUILD_DIR/nfiq/include \
--I$BUILD_DIR/pcasys/include"
+-I$BUILD_DIR/pcasys/include \
+-I$BUILD_DIR/ijg/src/lib/jpegb"
 
 ./setup.sh $(pwd)/../artifacts/windows --without-X11 --STDLIBS --64
 make config
+echo "Extracting export artifacts..."
+../win_extract_fix.sh
 echo "Building CommonNBIS foundations..."
 cd commonnbis/src/lib
 for sub in util ioutil f2c fft; do
@@ -46,7 +49,7 @@ for sub in util ioutil f2c fft; do
         CC="$CC" \
         AR="$AR" \
         RANLIB="$RANLIB" \
-        CFLAGS="-fcommon -I$COMPAT_DIR -include $COMPAT_DIR/compat.h $MASTER_INCLUDES"
+        CFLAGS="-fcommon -D__NBISLE__ -I$COMPAT_DIR -include $COMPAT_DIR/compat.h $MASTER_INCLUDES"
 done
 cd ../../../
 # 1. Build the base utilities first (the foundation)
@@ -57,7 +60,7 @@ for dir in $MISSING_LIBS; do
         CC="$CC" \
         AR="$AR" \
         RANLIB="$RANLIB" \
-        CFLAGS="-fcommon -I$COMPAT_DIR -include $COMPAT_DIR/compat.h $MASTER_INCLUDES"
+        CFLAGS="-fcommon -D__NBISLE__ -I$COMPAT_DIR -include $COMPAT_DIR/compat.h $MASTER_INCLUDES"
 done
 
 # 2. Build everything else
@@ -78,7 +81,7 @@ for d in */ ; do
       CXX="$CXX" \
       AR="$AR" \
       RANLIB="$RANLIB" \
-      CFLAGS="-fcommon -I$COMPAT_DIR -include $COMPAT_DIR/compat.h $MASTER_INCLUDES"
+      CFLAGS="-fcommon -D__NBISLE__ -I$COMPAT_DIR -include $COMPAT_DIR/compat.h $MASTER_INCLUDES"
     ) || echo "Failed to build libs in $d, skipping..."
   fi
 done
