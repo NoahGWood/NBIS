@@ -4,17 +4,17 @@ set -e
 ROOT=$(pwd)
 SRC=$ROOT/vendor/nbis
 
-# -------- Linux --------
-rm -rf build-linux
-cp -r $SRC build-linux
-cd build-linux
+# # -------- Linux --------
+# rm -rf build-linux
+# cp -r $SRC build-linux
+# cd build-linux
 
-./setup.sh $ROOT/artifacts/linux --without-X11 --STDLIBS --64
-make config
-make -j$(nproc) it CFLAGS="-fcommon"
-make install LIBNBIS=yes
+# ./setup.sh $ROOT/artifacts/linux --without-X11 --STDLIBS --64
+# make config
+# make -j$(nproc) it CFLAGS="-fcommon"
+# make install
 
-cd $ROOT
+# cd $ROOT
 
 # -------- Windows --------
 rm -rf build-windows
@@ -26,34 +26,68 @@ export CXX=x86_64-w64-mingw32-g++
 export LD=x86_64-w64-mingw32-gcc
 export AR="x86_64-w64-mingw32-ar rcs"
 export RANLIB=x86_64-w64-mingw32-ranlib
+BUILD_DIR=$(pwd)
 COMPAT_DIR=$(pwd)/compat
+MASTER_INCLUDES="-I$BUILD_DIR/commonnbis/include \
+-I$BUILD_DIR/imgtools/include \
+-I$BUILD_DIR/an2k/include \
+-I$BUILD_DIR/bozorth3/include \
+-I$BUILD_DIR/mindtct/include \
+-I$BUILD_DIR/nfseg/include \
+-I$BUILD_DIR/nfiq/include \
+-I$BUILD_DIR/pcasys/include"
 
 ./setup.sh $(pwd)/../artifacts/windows --without-X11 --STDLIBS --64
 make config
-# Someday may fix, probably not but maybe
-# make -j$(nproc) it \
-#   CC=x86_64-w64-mingw32-gcc \
-#   CXX=x86_64-w64-mingw32-g++ \
-#   AR="$AR" \
-#   RANLIB=$RANLIB \
-#   CFLAGS="-fcommon -I$(pwd)/compat -include $(pwd)/compat/compat.h"
-# make install
-
-# headers
-for d in */ ; do
-  if [ -f "$d/Makefile" ]; then
-    (cd "$d" && make -q cpheaders 2>/dev/null && make cpheaders) || true
-  fi
+echo "Building CommonNBIS foundations..."
+cd commonnbis/src/lib
+for sub in util ioutil f2c fft; do
+    make -C $sub \
+        CC="$CC" \
+        AR="$AR" \
+        RANLIB="$RANLIB" \
+        CFLAGS="-fcommon -I$COMPAT_DIR -include $COMPAT_DIR/compat.h $MASTER_INCLUDES"
 done
+cd ../../../
+# 1. Build the base utilities first (the foundation)
+MISSING_LIBS="util ioutil fft"
+for dir in $MISSING_LIBS; do
+    echo "Building core dependency: $dir"
+    make -C commonnbis/src/lib/$dir -j$(nproc) \
+        CC="$CC" \
+        AR="$AR" \
+        RANLIB="$RANLIB" \
+        CFLAGS="-fcommon -I$COMPAT_DIR -include $COMPAT_DIR/compat.h $MASTER_INCLUDES"
+done
+
+# # headers
+# for d in */ ; do
+#   if [ -f "$d/Makefile" ]; then
+#     (cd "$d" && make -q cpheaders 2>/dev/null && make cpheaders) || true
+#   fi
+# done
+
+# 2. Build everything else
 # libs only
 for d in */ ; do
-  (cd "$d" && make -j$(nproc) libs \
-    CC="$CC" \
-    CXX="$CXX" \
-    AR="$AR" \
-    RANLIB="$RANLIB" \
-    CFLAGS="-fcommon -I$COMPAT_DIR -include $COMPAT_DIR/compat.h"
-  ) || true
+  # Determine the actual library source directory
+  LIB_SRC_DIR=""
+  if [ -d "$d/src/lib/$d" ]; then
+    LIB_SRC_DIR="$d/src/lib/$d"
+  elif [ -d "$d/src/lib" ]; then
+    LIB_SRC_DIR="$d/src/lib"
+  fi
+
+  if [ -n "$LIB_SRC_DIR" ]; then
+    echo "Building libs in $d..."
+    (cd "$d" && make -C "src/lib" -j$(nproc) libs \
+      CC="$CC" \
+      CXX="$CXX" \
+      AR="$AR" \
+      RANLIB="$RANLIB" \
+      CFLAGS="-fcommon -I$COMPAT_DIR -include $COMPAT_DIR/compat.h $MASTER_INCLUDES"
+    ) || echo "Failed to build libs in $d, skipping..."
+  fi
 done
 
 mkdir -p ../artifacts/windows/lib
@@ -61,3 +95,6 @@ mkdir -p ../artifacts/windows/include
 
 cp -r exports/lib/* ../artifacts/windows/lib/ || true
 cp -r exports/include/* ../artifacts/windows/include/ || true
+
+cp commonnbis/lib/libutil.a ../artifacts/windows/lib/
+cp commonnbis/lib/libioutil.a ../artifacts/windows/lib/

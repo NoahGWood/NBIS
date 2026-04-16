@@ -13,12 +13,12 @@
 #endif
 
 /* safety */
-#ifdef max
-#undef max
-#endif
-#ifdef min
-#undef min
+#ifndef max
+#define max(a,b) ((a) > (b) ? (a) : (b))
 #endif
 
+#ifndef min
+#define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
 
 #endif

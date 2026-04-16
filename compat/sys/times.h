@@ -32,12 +32,4 @@ static inline long sysconf(int name) {
     return CLOCKS_PER_SEC;
 }
 
-/* Optional: kill macro collisions */
-#ifdef max
-#undef max
-#endif
-#ifdef min
-#undef min
-#endif
-
 #endif
